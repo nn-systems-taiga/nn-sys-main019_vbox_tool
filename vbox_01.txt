@@ -1,0 +1,323 @@
+Python_CSV化-----------------------------------------------
+import pandas as pd
+
+# VBOファイルを読み込む
+with open('file.vbo', 'r') as f:
+    lines = f.readlines()
+
+# データを格納するリストを作成
+data = []
+columns = []
+units = []
+
+# メタデータを抽出
+for line in lines:
+    if line.startswith('[columns]'):
+        columns = next(lines).strip().split(',')
+    elif line.startswith('[units]'):
+        units = next(lines).strip().split(',')
+    elif not line.startswith('['):
+        data.append(line.strip().split(','))
+
+# データをDataFrameに変換
+df = pd.DataFrame(data, columns=columns)
+
+# Excelファイルに保存
+df.to_excel('vbox_output.xlsx', index=False)
+
+
+Python_DB化-----------------------------------------------
+import pyodbc
+import csv
+
+# Access DBに接続
+conn = pyodbc.connect(r'DRIVER={Microsoft Access Driver (*.mdb, *.accdb)};DBQ=C:\path\to\your\database.accdb')
+cursor = conn.cursor()
+
+# CSVファイルの読み込み
+with open('vbo_data.csv', 'r') as f:
+    reader = csv.reader(f)
+    next(reader)  # ヘッダー行をスキップ
+    for row in reader:
+        cursor.execute("INSERT INTO VBOXData (Time, Lat, Long, Velocity, AccelX, AccelY, Brake) VALUES (?, ?, ?, ?, ?, ?, ?)", row)
+
+# コミットと接続終了
+conn.commit()
+cursor.close()
+conn.close()
+
+
+VBA_DB化--------------------------------------------------------------------
+Sub ImportVBOtoAccess()
+    Dim db As Database
+    Dim table As TableDef
+    Dim line As String
+    Dim fields() As String
+    Dim i As Integer
+    Dim filePath As String
+    Dim fileNumber As Integer
+
+    ' DBとファイルパスの設定
+    Set db = CurrentDb
+    filePath = "C:\path\to\your\file.vbo"  ' VBOファイルのパス
+    fileNumber = FreeFile
+
+    ' テーブル作成（必要に応じて）
+    Set table = db.CreateTableDef("VBOXData")
+    table.Fields.Append table.CreateField("Time", dbDouble)
+    table.Fields.Append table.CreateField("Lat", dbDouble)
+    table.Fields.Append table.CreateField("Long", dbDouble)
+    table.Fields.Append table.CreateField("Velocity", dbDouble)
+    table.Fields.Append table.CreateField("AccelX", dbDouble)
+    table.Fields.Append table.CreateField("AccelY", dbDouble)
+    table.Fields.Append table.CreateField("Brake", dbDouble)
+
+    db.TableDefs.Append table
+
+    ' VBOファイルを読み込む
+    Open filePath For Input As fileNumber
+
+    ' ファイルを1行ずつ処理
+    Do While Not EOF(fileNumber)
+        Line Input #fileNumber, line
+        ' ヘッダーを飛ばす
+        If InStr(line, "[data]") > 0 Then
+            Exit Do
+        End If
+    Loop
+
+    ' データを処理してテーブルに挿入
+    Do While Not EOF(fileNumber)
+        Line Input #fileNumber, line
+        If Len(Trim(line)) > 0 Then
+            fields = Split(line, ",")
+            db.Execute "INSERT INTO VBOXData (Time, Lat, Long, Velocity, AccelX, AccelY, Brake) " & _
+                       "VALUES (" & fields(0) & ", " & fields(1) & ", " & fields(2) & ", " & _
+                       fields(3) & ", " & fields(4) & ", " & fields(5) & ", " & fields(6) & ")"
+        End If
+    Loop
+
+    Close fileNumber
+    MsgBox "VBO Data Imported Successfully"
+End Sub
+
+
+Pythonマーカ-----------------------------------------------
+import pandas as pd
+import subprocess
+
+def remove_existing_markers(vbo_file):
+    """既存のマーカーを削除する関数"""
+    remove_command = f'"C:\\Program Files\\VBOX Test Suite\\bin\\remove_marker.exe" "{vbo_file}"'
+    try:
+        subprocess.run(remove_command, check=True, shell=True)  # マーカー削除
+        print("既存のマーカーを削除しました！")
+    except subprocess.CalledProcessError as e:
+        print(f"マーカー削除エラー: {e}")
+
+def add_markers(df, vbo_file, condition_func, marker_description):
+    """
+    条件関数に基づいてマーカーを追加する関数
+
+    :param df: データフレーム
+    :param vbo_file: VBOファイルのパス
+    :param condition_func: 条件を満たすかどうかをチェックする関数
+    :param marker_description: マーカーに記載する説明
+    """
+    # 条件を満たす時刻を取得
+    marker_times = df[condition_func(df)]['Time']
+
+    # マーカーの位置（時間）を表示
+    print(f"{marker_description} の条件でマーカーを追加すべき時刻：")
+    print(marker_times)
+
+    # 新しいマーカーを追加するコマンド
+    for time in marker_times:
+        add_command = f'"C:\\Program Files\\VBOX Test Suite\\bin\\add_marker.exe" "{vbo_file}" "Time" "{time}" "{marker_description}"'
+        try:
+            subprocess.run(add_command, check=True, shell=True)  # マーカー追加
+            print(f"マーカーを {time} に追加しました！")
+        except subprocess.CalledProcessError as e:
+            print(f"マーカー追加エラー: {e}")
+
+# メイン処理
+def main():
+    # VBOファイル（CSV形式に変換したもの）を読み込む
+    df = pd.read_csv(r"C:\path\to\your\data.csv")
+    vbo_file = r"C:\path\to\your\data.vbo"
+
+    # 既存のマーカーを削除
+    remove_existing_markers(vbo_file)
+
+    # 速度が50.0km/hを超えたときにマーカーを追加
+    add_markers(
+        df, vbo_file, 
+        lambda df: df['Velocity'] > 50.0,  # 小数点以下の速度を条件に
+        "Speed Over 50.0 km/h"
+    )
+
+    # 速度が60.0km/hを超えたときにマーカーを追加
+    add_markers(
+        df, vbo_file, 
+        lambda df: df['Velocity'] > 60.0,  # 小数点以下の速度を条件に
+        "Speed Over 60.0 km/h"
+    )
+
+    # 速度が75.5km/hを超えたときにマーカーを追加（例）
+    add_markers(
+        df, vbo_file, 
+        lambda df: df['Velocity'] > 75.5,  # 75.5km/hを超えるとき
+        "Speed Over 75.5 km/h"
+    )
+
+if __name__ == "__main__":
+    main()
+
+
+Pythonマーカ2-----------------------------------------------
+import pandas as pd
+import subprocess
+import pyvbox  # pyvboxライブラリを使ってVBOファイルを読み込むためのインポート
+
+# 既存のマーカーを削除する関数
+def remove_existing_markers(vbo_file):
+    """
+    指定したVBOファイルからすでに存在するマーカーを削除します。
+    
+    :param vbo_file: マーカーを削除したいVBOファイルのパス
+    """
+    # remove_marker.exeを使ってマーカー削除コマンドを作成
+    remove_command = f'"C:\\Program Files\\VBOX Test Suite\\bin\\remove_marker.exe" "{vbo_file}"'
+    try:
+        # コマンドを実行してマーカー削除
+        subprocess.run(remove_command, check=True, shell=True)  
+        print("既存のマーカーを削除しました！")
+    except subprocess.CalledProcessError as e:
+        # コマンド実行時にエラーが発生した場合のエラーメッセージ
+        print(f"マーカー削除エラー: {e}")
+
+# 条件に基づいてマーカーを追加する関数
+def add_markers(df, vbo_file, condition_func, marker_description):
+    """
+    指定された条件に基づいて、VBOファイルにマーカーを追加します。
+    
+    :param df: DataFrame。CSVなどで読み込んだデータ
+    :param vbo_file: マーカーを追加するVBOファイルのパス
+    :param condition_func: 条件関数。DataFrameを引数に取り、マーカーを追加する時刻を判定
+    :param marker_description: マーカーの説明（例えば "Speed Over 50.0 km/h" など）
+    """
+    # 条件関数を用いて、条件を満たす時刻（時間）を取得
+    marker_times = df[condition_func(df)]['Time']
+
+    # マーカーの位置（時間）を表示
+    print(f"{marker_description} の条件でマーカーを追加すべき時刻：")
+    print(marker_times)
+
+    # 条件を満たす時間ごとにマーカーを追加
+    for time in marker_times:
+        # add_marker.exeを使ってマーカー追加コマンドを作成
+        add_command = f'"C:\\Program Files\\VBOX Test Suite\\bin\\add_marker.exe" "{vbo_file}" "Time" "{time}" "{marker_description}"'
+        try:
+            # コマンドを実行してマーカーを追加
+            subprocess.run(add_command, check=True, shell=True)  
+            print(f"マーカーを {time} に追加しました！")
+        except subprocess.CalledProcessError as e:
+            # コマンド実行時にエラーが発生した場合のエラーメッセージ
+            print(f"マーカー追加エラー: {e}")
+
+# VBOファイルを直接読み込む関数
+def read_vbo_to_df(vbo_file):
+    """
+    VBOファイルを直接読み込んで、その内容をDataFrameとして返します。
+    
+    :param vbo_file: 読み込み対象のVBOファイルのパス
+    :return: VBOファイルから読み込んだデータを格納したDataFrame
+    """
+    vbo_data = pyvbox.VBOData(vbo_file)  # pyvboxを使用してVBOファイルからデータを読み込む
+    data = vbo_data.get_data()  # VBOデータを取得
+    df = pd.DataFrame(data)  # 取得したデータをpandasのDataFrameに変換
+    return df
+
+# メイン処理
+def main():
+    """
+    メイン処理。VBOファイルを読み込み、既存のマーカーを削除し、
+    速度条件に基づいてマーカーを追加する。
+    """
+    # VBOファイルのパスを指定（適宜変更）
+    vbo_file = r"C:\path\to\your\data.vbo"
+
+    # VBOファイルを直接読み込む
+    df = read_vbo_to_df(vbo_file)
+
+    # 既存のマーカーを削除
+    remove_existing_markers(vbo_file)
+
+    # 速度が50.0km/hを超えたときにマーカーを追加
+    add_markers(
+        df, vbo_file, 
+        lambda df: df['Velocity'] > 50.0,  # 速度が50.0km/hを超えたときの条件
+        "Speed Over 50.0 km/h"  # マーカーに付ける説明
+    )
+
+    # 速度が60.0km/hを超えたときにマーカーを追加
+    add_markers(
+        df, vbo_file, 
+        lambda df: df['Velocity'] > 60.0,  # 速度が60.0km/hを超えたときの条件
+        "Speed Over 60.0 km/h"  # マーカーに付ける説明
+    )
+
+    # 速度が75.5km/hを超えたときにマーカーを追加（例）
+    add_markers(
+        df, vbo_file, 
+        lambda df: df['Velocity'] > 75.5,  # 速度が75.5km/hを超えるときの条件
+        "Speed Over 75.5 km/h"  # マーカーに付ける説明
+    )
+
+# メイン関数を実行
+if __name__ == "__main__":
+    main()
+説明-----------------------------------------------
+python --version
+python3 --version
+
+pip install ライブラリ名
+pip3 install pandas
+
+cd C:\path\to\your\script
+python your_script.py
+
+
+remove_existing_markers 関数
+vbo_file: マーカーを削除する対象のVBOファイルのパスです。
+remove_command: subprocess を使って VBOX Test Suite の remove_marker.exe を呼び出すコマンドを作成します。
+subprocess.run(): 外部コマンドを実行するためのPythonの関数。ここでは、VBOファイル内の既存のマーカーを削除しています。
+
+add_markers 関数
+df: データフレーム（pandas.DataFrame）。VBOファイルから取得したデータを保持しています。
+vbo_file: マーカーを追加する対象のVBOファイルのパスです。
+condition_func: これは、マーカーを追加するための条件関数です。例えば、速度が50km/hを超えるといった条件を関数で指定します。
+marker_description: マーカーに付ける説明文です。例えば「Speed Over 50 km/h」といった文字列になります。
+marker_times: 条件を満たす時刻（時間）のリストです。条件を満たす行の Time 列を抽出します。
+add_command: マーカーを追加するコマンドです。add_marker.exe を使って、指定した時間にマーカーを追加します。
+
+read_vbo_to_df 関数
+vbo_file: 読み込むVBOファイルのパスです。
+pyvbox.VBOData(vbo_file): pyvbox ライブラリを使用してVBOファイルを読み込みます。
+data: VBOファイルから取得したデータです。pyvbox が提供するメソッドでデータを取得します。
+df: 取得したデータを pandas.DataFrame に変換し、DataFrame形式で返します。
+
+main 関数
+メイン処理として、VBOファイルを読み込み、条件に基づいてマーカーを削除したり追加したりします。
+vbo_file: 実際に使用するVBOファイルのパスです。適宜変更が必要です。
+df: VBOファイルから読み込んだデータを格納した pandas.DataFrame です。
+remove_existing_markers: 既存のマーカーを削除します。
+add_markers: 速度に応じてマーカーを追加します。ここでは、50.0km/h、60.0km/h、75.5km/hを超えた場合にマーカーを追加しています。
+
+
+# ANSIエスケープシーケンスで文字色を変更
+print("\033[31mこれは赤色のテキストです\033[0m")  # 31 は赤色
+print("\033[32mこれは緑色のテキストです\033[0m")  # 32 は緑色
+print("\033[33mこれは黄色のテキストです\033[0m")  # 33 は黄色
+print("\033[34mこれは青色のテキストです\033[0m")  # 34 は青色
+

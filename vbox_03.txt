@@ -1,0 +1,170 @@
+//VBA CSV----------------------------------------
+Sub ConvertVBOtoCSV()
+    Dim inputFilePath As String
+    Dim outputFilePath As String
+    Dim fileContent As String
+    Dim line As String
+    Dim lines() As String
+    Dim fso As Object, ts As Object
+    Dim i As Long
+    Dim row As Long
+
+    ' ① ユーザーに .VBO ファイルの選択を求める
+    inputFilePath = Application.GetOpenFilename("VBO Files (*.vbo), *.vbo")
+    If inputFilePath = "False" Then Exit Sub ' キャンセル時は終了
+    
+    ' ② 出力するCSVファイルの名前と保存場所を指定
+    outputFilePath = Application.GetSaveAsFilename("output.csv", "CSV Files (*.csv), *.csv")
+    If outputFilePath = "False" Then Exit Sub ' キャンセル時は終了
+
+    ' ③ ファイルシステムオブジェクトの準備（VBAでファイル読み込みに使う）
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    
+    ' ④ 指定されたVBOファイルを読み取り専用で開く
+    Set ts = fso.OpenTextFile(inputFilePath, 1) ' 1 = ForReading
+    
+    ' ⑤ ファイルの全内容を一気に文字列として読み込む
+    fileContent = ts.ReadAll
+    ts.Close
+
+    ' ⑥ 読み込んだ文字列を「改行コード（vbCrLf）」で分割 → 各行の配列にする
+    lines = Split(fileContent, vbCrLf)
+    
+    ' ⑦ 各行をExcelのセルに1行ずつ書き込む（1列目に）
+    row = 1
+    For i = 0 To UBound(lines)
+        line = lines(i)
+        ' 空行を無視して処理
+        If Trim(line) <> "" Then
+            Cells(row, 1).Value = line
+            row = row + 1
+        End If
+    Next i
+    
+    ' ⑧ 現在のExcelブックをCSV形式で保存
+    ThisWorkbook.SaveAs Filename:=outputFilePath, FileFormat:=xlCSV
+
+    ' ⑨ 完了メッセージを表示
+    MsgBox "CSVに変換しました: " & outputFilePath
+End Sub
+
+//VBA CSV配列----------------------------------------
+' 関数：CSVファイルを読み込んで2次元配列として返す
+Function ReadCSVToArray(filePath As String) As Variant
+    Dim fso As Object             ' FileSystemObject（ファイル操作用）
+    Dim ts As Object              ' TextStream（テキストファイル読み込み用）
+    Dim allText As String         ' ファイル全体の文字列データ
+    Dim lines() As String         ' 行単位で分割したデータ
+    Dim fields() As String        ' 1行の中のカンマ区切りデータ
+    Dim data() As Variant         ' 結果を格納する2次元配列
+    Dim i As Long, j As Long
+    Dim maxCols As Long           ' 最大列数（行ごとに列数が異なる場合に備えて）
+
+    ' FileSystemObjectを使ってファイル読み込み準備
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    Set ts = fso.OpenTextFile(filePath, 1) ' 1 = 読み込み専用
+
+    ' ファイル全体を1つの文字列として読み込む
+    allText = ts.ReadAll
+    ts.Close
+
+    ' 改行コードで分割して、行ごとの配列にする
+    lines = Split(allText, vbCrLf)
+
+    ' 列数（カンマで区切られたフィールド数）の最大値を探す
+    For i = 0 To UBound(lines)
+        If Trim(lines(i)) <> "" Then
+            fields = Split(lines(i), ",") ' カンマで区切る
+            If UBound(fields) > maxCols Then
+                maxCols = UBound(fields) ' 一番多い列数を保持
+            End If
+        End If
+    Next i
+
+    ' 2次元配列を行数×最大列数で初期化
+    ReDim data(0 To UBound(lines), 0 To maxCols)
+
+    ' 行ごとにデータを配列に格納
+    For i = 0 To UBound(lines)
+        If Trim(lines(i)) <> "" Then
+            fields = Split(lines(i), ",")
+            For j = 0 To UBound(fields)
+                data(i, j) = fields(j) ' 各セルに値を格納
+            Next j
+        End If
+    Next i
+
+    ' 完成した配列を関数の戻り値として返す
+    ReadCSVToArray = data
+End Function
+
+Sub Test_ReadCSV()
+    Dim csvData As Variant
+    Dim filePath As String
+    Dim i As Long, j As Long
+
+    ' ユーザーにCSVファイルの選択を求める
+    filePath = Application.GetOpenFilename("CSV Files (*.csv), *.csv")
+    If filePath = "False" Then Exit Sub ' キャンセルした場合は終了
+
+    ' 関数を使ってCSVを配列に読み込む
+    csvData = ReadCSVToArray(filePath)
+
+    ' 配列の内容をSheet1に出力（確認用）
+    For i = LBound(csvData, 1) To UBound(csvData, 1)
+        For j = LBound(csvData, 2) To UBound(csvData, 2)
+            If Not IsEmpty(csvData(i, j)) Then
+                Sheet1.Cells(i + 1, j + 1).Value = csvData(i, j)
+            End If
+        Next j
+    Next i
+End Sub
+
+
+//補足拡張-------------------------------------
+' CSVを読み込み、先頭skipRows行を飛ばして2次元配列として返す
+Function ReadCSVToArraySkip(filePath As String, skipRows As Long) As Variant
+    Dim fso As Object
+    Dim ts As Object
+    Dim allText As String
+    Dim lines() As String
+    Dim fields() As String
+    Dim data() As Variant
+    Dim i As Long, j As Long
+    Dim maxCols As Long
+    Dim startRow As Long
+    
+    ' ファイル読み込み準備
+    Set fso = CreateObject("Scripting.FileSystemObject")
+    Set ts = fso.OpenTextFile(filePath, 1)
+    allText = ts.ReadAll
+    ts.Close
+    
+    lines = Split(allText, vbCrLf)
+    
+    ' 実際に処理開始する行番号（skipRows行分飛ばす）
+    startRow = skipRows
+    
+    ' 最大列数を調べる（skipRows行は読み飛ばす）
+    For i = startRow To UBound(lines)
+        If Trim(lines(i)) <> "" Then
+            fields = Split(lines(i), ",")
+            If UBound(fields) > maxCols Then maxCols = UBound(fields)
+        End If
+    Next i
+    
+    ' 配列のサイズを設定（行数は読み込む行数 = 全体 - skipRows）
+    ReDim data(0 To UBound(lines) - skipRows, 0 To maxCols)
+    
+    ' 配列に値を格納
+    For i = startRow To UBound(lines)
+        If Trim(lines(i)) <> "" Then
+            fields = Split(lines(i), ",")
+            For j = 0 To UBound(fields)
+                data(i - skipRows, j) = fields(j)  ' インデックス調整に注意
+            Next j
+        End If
+    Next i
+    
+    ReadCSVToArraySkip = data
+End Function

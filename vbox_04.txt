@@ -1,0 +1,15 @@
+folderMap.Add "ドキュメント", "Documents"
+    folderMap.Add "ピクチャ", "Pictures"
+    folderMap.Add "音楽", "Music"
+    folderMap.Add "ビデオ", "Videos"
+    folderMap.Add "デスクトップ", "Desktop"
+
+Dim path As String
+path = "C:\Users\YourName\Documents"
+
+If Dir(path, vbDirectory) <> "" Then
+    MsgBox "フォルダが存在します"
+Else
+    MsgBox "フォルダが存在しません"
+End If
+

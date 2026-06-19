@@ -1,0 +1,299 @@
+import os
+import cv2
+import csv
+import numpy as np
+from datetime import timedelta
+import openpyxl
+from openpyxl.drawing.image import Image as OpenpyxlImage
+import tkinter as tk
+from tkinter import filedialog
+
+def nothing(x):
+    pass
+
+# --- 1. ユーザーによるファイル・フォルダの選択（ポップアップ画面） ---
+root = tk.Tk()
+root.withdraw()  # メインウィンドウは非表示にする
+
+print("【選択】解析したい動画ファイル（複数可）が入っているフォルダを選んでください...")
+video_dir = filedialog.askdirectory(title="動画ファイルが入ったフォルダを選択")
+if not video_dir:
+    print("動画フォルダが選択されなかったため終了します。")
+    exit()
+
+print("【選択】比較用画像（標識テンプレート）が入ったフォルダを選んでください...")
+template_dir = filedialog.askdirectory(title="テンプレートフォルダを選択")
+if not template_dir:
+    print("テンプレートフォルダが選択されなかったため終了します。")
+    exit()
+
+print("【選択】結果を出力したい保存先フォルダを選んでください...")
+base_output_dir = filedialog.askdirectory(title="結果の出力先フォルダを選択")
+if not base_output_dir:
+    print("出力先が選択されなかったため終了します。")
+    exit()
+
+# 読み込み可能な動画の拡張子を複数対応
+SUPPORTED_EXTENSIONS = ('.mp4', '.avi', '.mov', '.mkv', '.webm')
+video_files = [f for f in os.listdir(video_dir) if f.lower().endswith(SUPPORTED_EXTENSIONS)]
+
+if not video_files:
+    print("エラー: 選択されたフォルダに対応する動画ファイルが見つかりません。")
+    exit()
+
+print(f"【動画検出】合計 {len(video_files)} 本の動画を一括処理します。")
+
+
+# --- 2. テンプレート画像のオリジナル（原版）の読み込み ---
+raw_templates = {}
+for file_name in os.listdir(template_dir):
+    if file_name.lower().endswith(('.png', '.jpg', '.jpeg')):
+        path = os.path.join(template_dir, file_name)
+        img = cv2.imread(path)
+        if img is not None:
+            sign_name, _ = os.path.splitext(file_name)
+            raw_templates[sign_name] = img
+
+if not raw_templates:
+    print("エラー: 選択されたフォルダに標識画像が一枚もありません。")
+    exit()
+
+
+# --- 3. 画面と調整スライダーの共通設定 ---
+window_name = "Adaptive Batch Sign Detection System"
+cv2.namedWindow(window_name)
+cv2.createTrackbar("Shape Match (%)", window_name, 70, 100, nothing) # 初期値はブレ対策を考慮し70%
+cv2.createTrackbar("Color Ratio (%)", window_name, 15, 100, nothing) # 初期値は15%
+
+# スケール伸縮（0.4倍から1.5倍まで0.05刻み）
+scales = np.arange(0.4, 1.5, 0.05)
+
+# 処理の間引き設定（3フレームに1回処理して約3倍高速化）
+FRAME_SKIP_INTERVAL = 3
+
+# 暗所・明暗差対策用のCLAHEオブジェクト（制限付き適応ヒストグラム平坦化）
+clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
+
+# --- 4. 動画フォルダ丸ごと一括解析ループ（バッチ処理） ---
+for v_idx, video_file in enumerate(video_files):
+    video_path = os.path.join(video_dir, video_file)
+    
+    cap = cv2.VideoCapture(video_path)
+    if not cap.isOpened():
+        print(f"警告: {video_file} を開けなかったためスキップします。")
+        continue
+
+    fps = cap.get(cv2.CAP_PROP_FPS)
+    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
+    v_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
+    v_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
+    
+    print(f"\n=========================================")
+    print(f"【処理中 ({v_idx+1}/{len(video_files)})】: {video_file} (解像度: {v_w}x{v_h})")
+    print(f"=========================================")
+
+    # 【動画適応】読み込んだ動画の解像度に合わせてテンプレートの加工方法を動的に変更
+    templates = {}
+    for sign_name, img in raw_templates.items():
+        processed_img = img.copy()
+        
+        # 720x480（DVD比率）の場合、横引き伸ばしの歪みを再現
+        if v_w == 720 and v_h == 480:
+            orig_h, orig_w = img.shape[:2]
+            processed_img = cv2.resize(img, (int(orig_w * 1.1), orig_h), interpolation=cv2.INTER_LINEAR)
+            
+        # 640x360 などの低解像度動画の場合、高画質なテンプレートをあらかじめ滑らかに縮小・ボカす
+        elif v_w <= 800:
+            orig_h, orig_w = img.shape[:2]
+            if orig_w > 100:
+                processed_img = cv2.resize(img, (int(orig_w * 0.5), int(orig_h * 0.5)), interpolation=cv2.INTER_AREA)
+            processed_img = cv2.GaussianBlur(processed_img, (3, 3), 0)
+
+        # テンプレート画像にCLAHE（明暗差対策）を適用してグレースケール化
+        t_gray = cv2.cvtColor(processed_img, cv2.COLOR_BGR2GRAY)
+        t_gray_equalized = clahe.apply(t_gray)
+        
+        # ファイル名（コメント例）に応じた色の自動振り分けロジック
+        color_type = "red"
+        if any(keyword in sign_name for keyword in ["指定方向", "一方通行", "案内", "専用", "横断"]):
+            color_type = "blue"
+        elif any(keyword in sign_name for keyword in ["踏切", "工事", "注意", "警戒", "あり", "注意"]):
+            color_type = "yellow"
+            
+        templates[sign_name] = (t_gray_equalized, color_type)
+
+    # 動画ごとの個別出力フォルダを自動生成（上書き・混同防止）
+    video_name_only, _ = os.path.splitext(video_file)
+    output_dir = os.path.join(base_output_dir, f"output_{video_name_only}")
+    os.makedirs(output_dir, exist_ok=True)
+    cropped_signs_dir = os.path.join(output_dir, "detected_signs")
+    os.makedirs(cropped_signs_dir, exist_ok=True)
+
+    # Excelの新規作成（2シート構成）
+    wb = openpyxl.Workbook()
+    
+    # シート1: 検出ログ（認識精度となる形状一致度と色割合を記録）
+    ws_log = wb.active
+    ws_log.title = "検出ログ"
+    ws_log.append(["検出番号", "切り抜き画像", "判定された標識名", "タイムスタンプ", "経過時間(秒)", "形状一致度", "色割合", "個別ファイル名"])
+    ws_log.column_dimensions['B'].width = 20 
+
+    # シート2: 集計用（標識の種類別・自動カウント集計）
+    ws_summary = wb.create_sheet(title="標識別カウント集計")
+    ws_summary.append(["標識の種類", "合計検出回数"])
+
+    # 制御用変数
+    crop_count = 0
+    frame_count = 0
+    last_detected_time = -1.0
+    
+    # 停車・大渋滞時重複カット用の座標管理変数
+    last_x, last_y = -999, -999
+    
+    # 統計用カウント辞書
+    sign_counts = {name: 0 for name in raw_templates.keys()}
+
+    # --- 5. メイン動画解析ループ ---
+    while cap.isOpened():
+        ret, frame = cap.read()
+        if not ret:
+            break
+
+        frame_count += 1
+        seconds = frame_count / fps
+        timestamp = str(timedelta(seconds=seconds)).split('.')
+
+        # 動画全体の解析進捗率（プログレスバー表示用）
+        progress = (frame_count / total_frames) * 100 if total_frames > 0 else 0
+
+        # 【高速化】指定フレーム間隔以外は処理をスキップ（間引き）
+        if frame_count % FRAME_SKIP_INTERVAL != 0:
+            cv2.putText(frame, f"Video: {v_idx+1}/{len(video_files)} | Progress: {progress:.1f}% ({v_w}x{v_h})", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+            cv2.imshow(window_name, frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'): break
+            continue
+
+        user_shape_thresh = cv2.getTrackbarPos("Shape Match (%)", window_name) / 100.0
+        user_color_thresh = cv2.getTrackbarPos("Color Ratio (%)", window_name)
+
+        # 1秒間の重複保存ガード（時間軸のクールダウン）
+        if last_detected_time > 0 and (seconds - last_detected_time) < 1.0:
+            cv2.putText(frame, f"Video: {v_idx+1}/{len(video_files)} | Progress: {progress:.1f}% ({v_w}x{v_h})", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+            cv2.imshow(window_name, frame)
+            if cv2.waitKey(1) & 0xFF == ord('q'): break
+            continue
+
+        # フレームのグレースケール化とCLAHE（暗所・明暗差補正）の適用
+        frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
+        frame_gray_equalized = clahe.apply(frame_gray)
+        
+        global_best_val = 0
+        global_best_loc = None
+        global_best_w, global_best_h = 0, 0
+        detected_sign_name = ""
+        detected_color_type = "red"
+
+        # 登録されたすべてのテンプレートを総当たり検索
+        for sign_name, (t_gray_eq, color_type) in templates.items():
+            for scale in scales:
+                resized_w = int(t_gray_eq.shape * scale)
+                resized_h = int(t_gray_eq.shape * scale)
+                
+                if resized_h > frame_gray_equalized.shape or resized_w > frame_gray_equalized.shape:
+                    continue
+                    
+                resized_template = cv2.resize(t_gray_eq, (resized_w, resized_h))
+                result = cv2.matchTemplate(frame_gray_equalized, resized_template, cv2.TM_CCOEFF_NORMED)
+                _, max_val, _, max_loc = cv2.minMaxLoc(result)
+                
+                if max_val > global_best_val:
+                    global_best_val = max_val
+                    global_best_loc = max_loc
+                    global_best_w, global_best_h = resized_w, resized_h
+                    detected_sign_name = sign_name
+                    detected_color_type = color_type
+
+        # 形状一致度の判定
+        if global_best_val > user_shape_thresh:
+            x, y = global_best_loc
+            
+            # 【重複カット】前回の検出座標とほぼ同じ（上下左右30px以内＝停車中）なら保存をパス
+            if abs(x - last_x) < 30 and abs(y - last_y) < 30:
+                continue
+            
+            cropped_color = frame[y:y+global_best_h, x:x+global_best_w]
+            
+            if cropped_color.size > 0:
+                hsv_crop = cv2.cvtColor(cropped_color, cv2.COLOR_BGR2HSV)
+                
+                # 自動判別された標識の色（赤・青・黄）に応じてHSVマスクを動的作成（※実用に即したHSVの一般的な閾値を適用）
+                if detected_color_type == "red":
+                    mask1 = cv2.inRange(hsv_crop, np.array([0, 70, 50]), np.array([10, 255, 255]))
+                    mask2 = cv2.inRange(hsv_crop, np.array([170, 70, 50]), np.array([180, 255, 255]))
+                    color_mask = mask1 + mask2
+                elif detected_color_type == "blue":
+                    color_mask = cv2.inRange(hsv_crop, np.array([90, 70, 50]), np.array([130, 255, 255]))
+                elif detected_color_type == "yellow":
+                    color_mask = cv2.inRange(hsv_crop, np.array([15, 70, 50]), np.array([35, 255, 255]))
+                
+                color_pixels = cv2.countNonZero(color_mask)
+                total_pixels = global_best_w * global_best_h
+                color_ratio = (color_pixels / total_pixels) * 100
+                
+                # 色割合の最終判定
+                if color_ratio > user_color_thresh:
+                    crop_count += 1
+                    print("\a", end="") # 【通知】標識検出時にPCからピッとビープ音を鳴らす
+                    
+                    image_filename = f"detected_{crop_count:04d}_{detected_sign_name}.jpg"
+                    image_filepath = os.path.join(cropped_signs_dir, image_filename)
+                    
+                    # ① JPG画像を別途フォルダに名前付き保存
+                    cv2.imwrite(image_filepath, cropped_color)
+                    
+                    # 統計のカウントアップ
+                    sign_counts[detected_sign_name] += 1
+                    
+                    # ② Excelへのログ記録
+                    row_num = crop_count + 1
+                    ws_log.append([
+                        crop_count, "", detected_sign_name, timestamp[0], 
+                        round(seconds, 2), f"{global_best_val*100:.1f}%", f"{color_ratio:.1f}%", image_filename
+                    ])
+                    
+                    # Excelセルへの画像埋め込み処理
+                    ws_log.row_dimensions[row_num].height = 60
+                    img_for_excel = OpenpyxlImage(image_filepath)
+                    img_for_excel.width = 80
+                    img_for_excel.height = int(global_best_h * (80 / global_best_w))
+                    ws_log.add_image(img_for_excel, f"B{row_num}")
+                    
+                    # 今回の座標と時間を記録
+                    last_x, last_y = x, y
+                    last_detected_time = seconds
+                    
+                    # 画面表示用の緑枠と検出標識名テキストを描画
+                    cv2.rectangle(frame, (x, y), (x + global_best_w, y + global_best_h), (0, 255, 0), 3)
+                    cv2.putText(frame, detected_sign_name, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
+
+        # 画面上に進捗率を常時レンダリング
+        cv2.putText(frame, f"Video: {v_idx+1}/{len(video_files)} | Progress: {progress:.1f}% ({v_w}x{v_h})", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
+        cv2.imshow(window_name, frame)
+
+        if cv2.waitKey(1) & 0xFF == ord('q'):
+            print("ユーザーによって一括処理が中断されました。")
+            break
+
+    # 動画終了後に集計用シートへデータを書き込み
+    for s_name, count in sign_counts.items():
+        ws_summary.append([s_name, count])
+
+    cap.release()
+    
+    # 成果物Excelの保存
+    excel_filename = os.path.join(output_dir, f"result_{video_name_only}.xlsx")
+    wb.save(excel_filename)
+    print(f"【完了】結果をエクスポートしました -> {excel_filename}")
+
+cv2.destroyAllWindows()
+print(f"\n【一括処理終了】すべての動画の解析が安全に完了しました。")

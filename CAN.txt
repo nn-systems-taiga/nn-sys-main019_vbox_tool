@@ -1,1 +1,578 @@
 https://github.com/RacelogicVBOX/VBB-to-Python
+
+
+'***********************************************************************
+'AINNRB_ver0.0「Artificial Intelligence Neural Network Environment Build」
+'-------------------------------------------------------------------------------------------------
+'共有用変数
+
+'-------------------------------------------------------------------------------------------------
+
+'-------------------------------------------------------------------------------------------------
+'個人用変数
+Dim counter As Integer   'ループ用変数
+
+Dim TSV_data As Variant '一時保管変数
+'-------------------------------------------------------------------------------------------------
+
+'-------------------------------------------------------------------------------------------------
+'Debug.Print Err.Description
+'エラーコード(AINNRB)
+'err_001 random_main_process()
+'err_002 random_initialize_process()
+'err_003 random_next_process()
+'err_004 random_train_process()
+'err_005 sigmoid_train_process()
+'err_006 back_propagation_feed_forward_process()
+'err_007 back_propagation_output_node_process()
+'err_008 back_propagation_input_node_process()
+'err_009 back_propagation_train_process()
+'err_010 back_propagation_initialize_process()
+'err_011 deep_learning_train_process()
+'err_012 deep_learning_initialize_process()
+'-------------------------------------------------------------------------------------------------
+'***********************************************************************
+
+
+'***********************************************************************
+'乱数構築メイン動作用プロシージャ
+Sub random_main_process()
+On Error GoTo err_random_main_process '例外処理
+    
+    Dim train_status As Boolean    '学習完了状態の保管用変数
+    
+    Dim train_counter As Integer      '学習回数確認保管用変数
+    
+    Dim train_data(4) As Integer    'トレーニングデータの保管用変数
+    Dim test_data(4) As Integer     'テストデータの保管用変数
+    
+    'セットアップ-----------------------------------------------------------
+    random_logic.Range("C18,C20,C22").Value = 0
+    'セットアップ-----------------------------------------------------------
+    
+    'トレーニングデータ及びテストデータの取得--------------------------------
+    train_data(0) = random_logic.Range("G7").Value
+    train_data(1) = random_logic.Range("G8").Value
+    train_data(2) = random_logic.Range("G9").Value
+    train_data(3) = random_logic.Range("G10").Value
+    
+    test_data(0) = random_logic.Range("H7").Value
+    test_data(1) = random_logic.Range("H8").Value
+    test_data(2) = random_logic.Range("H9").Value
+    test_data(3) = random_logic.Range("H10").Value
+    'トレーニングデータ及びテストデータの取得--------------------------------
+    
+    Call random_initialize_process '初期化用プロシージャの呼び出し
+    
+    '仮想学習------------------------------------------------------------
+    counter = 0
+    Do While counter <= 1000 '1000学習する
+        
+        '学習(重みとしきい値の調整)------------------------------------
+        Call random_next_process    '入力入れ替え用プロシージャの呼び出し
+        Call random_train_process    '学習用プロシージャの呼び出し
+        
+        Call random_next_process    '入力入れ替え用プロシージャの呼び出し
+        Call random_train_process    '学習用プロシージャの呼び出し
+        
+        Call random_next_process    '入力入れ替え用プロシージャの呼び出し
+        Call random_train_process    '学習用プロシージャの呼び出し
+        
+        Call random_next_process    '入力入れ替え用プロシージャの呼び出し
+        Call random_train_process    '学習用プロシージャの呼び出し
+        '学習(重みとしきい値の調整)------------------------------------
+        
+        '学習結果の取得-----------------------------------------------
+        Call random_next_process    '入力入れ替え用プロシージャの呼び出し
+        Call random_next_process    '入力入れ替え用プロシージャの呼び出し
+        Call random_next_process    '入力入れ替え用プロシージャの呼び出し
+        Call random_next_process    '入力入れ替え用プロシージャの呼び出し
+        
+        test_data(0) = random_logic.Range("H7").Value
+        test_data(1) = random_logic.Range("H8").Value
+        test_data(2) = random_logic.Range("H9").Value
+        test_data(3) = random_logic.Range("H10").Value
+        '学習結果の取得-----------------------------------------------
+        
+        '学習結果の判定-----------------------------------------------
+        train_status = True    '学習完了状態の初期化
+        
+        If (train_data(0) <> test_data(0)) Then train_status = False
+        If (train_data(1) <> test_data(1)) Then train_status = False
+        If (train_data(2) <> test_data(2)) Then train_status = False
+        If (train_data(3) <> test_data(3)) Then train_status = False
+        
+        If (train_status = True) Then '過学習防止
+            Exit Do
+        End If
+        '学習結果の判定-----------------------------------------------
+        
+        'カウンタの更新--------------------------------------------------
+        counter = counter + 1
+        train_counter = train_counter + 1
+        'カウンタの更新--------------------------------------------------
+        
+        'パラメータの見直し-----------------------------------------------
+        If (train_counter = 10) Then
+            
+            Call random_initialize_process '初期化用プロシージャの呼び出し
+            train_counter = 0
+            
+        End If
+        'パラメータの見直し-----------------------------------------------
+        
+    Loop
+    '仮想学習------------------------------------------------------------
+    
+    MsgBox "既定の学習が完了" & vbLf & "結果が伴わない場合は再度学習してください"
+    
+    Exit Sub 'プロシージャ終了
+'例外処理---------------------------------------------------------------
+err_random_main_process:
+    MsgBox "正常に処理ができませんでした。" & vbLf & "err_001"  'ユーザ補足
+'例外処理---------------------------------------------------------------
+End Sub
+'***********************************************************************
+
+
+'***********************************************************************
+'初期化用プロシージャ
+Sub random_initialize_process()
+On Error GoTo err_random_initialize_process '例外処理
+    
+    '重み及びしきい値の初期化--------------------------------------------
+    random_logic.Range("M16").Value = Int(Rnd * 5 - 2)
+    random_logic.Range("M18").Value = Int(Rnd * 5 - 2)
+    random_logic.Range("P17").Value = Int(Rnd * 5 - 2)
+    
+    random_logic.Range("M22").Value = Int(Rnd * 5 - 2)
+    random_logic.Range("M24").Value = Int(Rnd * 5 - 2)
+    random_logic.Range("P23").Value = Int(Rnd * 5 - 2)
+    '重み及びしきい値の初期化--------------------------------------------
+    
+    Exit Sub 'プロシージャ終了
+'例外処理---------------------------------------------------------------
+err_random_initialize_process:
+    MsgBox "正常に処理ができませんでした。" & vbLf & "err_002"  'ユーザ補足
+'例外処理---------------------------------------------------------------
+End Sub
+'***********************************************************************
+
+
+'***********************************************************************
+'入力値入れ替え用プロシージャ
+Sub random_next_process()
+On Error GoTo err_random_next_process '例外処理
+    
+    random_logic.Range("C20").Value = random_logic.Range("C20").Value + 1   '入力値対応列の更新
+    
+    If (random_logic.Range("C20").Value >= 4) Then  '最終列の場合初期列に戻す
+    
+        random_logic.Range("C20").Value = 0
+    
+    End If
+    
+    random_logic.Range("C18").Value = random_logic.Range("E7").Offset(random_logic.Range("C20"), 0)   'x1を更新
+    random_logic.Range("C22").Value = random_logic.Range("F7").Offset(random_logic.Range("C20"), 0)   'x2を更新
+    random_logic.Range("H7").Offset(random_logic.Range("C20"), 0) = random_logic.Range("AK20").Value    '学習結果(出力)を取得
+    
+    Exit Sub 'プロシージャ終了
+'例外処理---------------------------------------------------------------
+err_random_next_process:
+    MsgBox "正常に処理ができませんでした。" & vbLf & "err_003"  'ユーザ補足
+'例外処理---------------------------------------------------------------
+End Sub
+'***********************************************************************
+
+
+'***********************************************************************
+'学習用プロシージャ
+Sub random_train_process()
+On Error GoTo err_random_train_process '例外処理
+    
+    '重みとしきい値の調整-------------------------------------------------
+    If (random_logic.Range("AK20").Value > random_logic.Range("G7").Offset(random_logic.Range("C20"), 0)) Then
+    
+        random_logic.Range("AE20").Value = random_logic.Range("AE20").Value + 0.5
+        
+        If (random_logic.Range("Y18").Value = 1) Then
+            random_logic.Range("AB19").Value = random_logic.Range("AB19").Value - 0.5
+        End If
+        
+        If (random_logic.Range("Y22").Value = 1) Then
+            random_logic.Range("AB21").Value = random_logic.Range("AB21").Value - 0.5
+        End If
+    
+    ElseIf (random_logic.Range("AK20").Value < random_logic.Range("G7").Offset(random_logic.Range("C20"), 0)) Then
+        
+        random_logic.Range("AE20").Value = random_logic.Range("AE20").Value - 0.5
+        
+        If (random_logic.Range("Y18").Value = 1) Then
+            random_logic.Range("AB19").Value = random_logic.Range("AB19").Value + 0.5
+        End If
+        
+        If (random_logic.Range("Y22").Value = 1) Then
+            random_logic.Range("AB21").Value = random_logic.Range("AB21").Value + 0.5
+        End If
+        
+    End If
+    '重みとしきい値の調整-------------------------------------------------
+        
+    Exit Sub 'プロシージャ終了
+'例外処理---------------------------------------------------------------
+err_random_train_process:
+    MsgBox "正常に処理ができませんでした。" & vbLf & "err_004"  'ユーザ補足
+'例外処理---------------------------------------------------------------
+End Sub
+'***********************************************************************
+
+
+'***********************************************************************
+'学習用プロシージャ
+Sub sigmoid_train_process()
+On Error GoTo err_sigmoid_train_process '例外処理
+    
+    Dim next_counter As Integer 'ループ用変数
+    
+    '仮想学習-----------------------------------------------------------
+    counter = 0
+    Do While counter <= 1000
+
+        '1学習工程--------------------------------------------
+        For next_counter = 0 To 3
+            
+            sigmoid_neuron.Range("C15") = sigmoid_neuron.Range("Q7").Offset(next_counter, 0)   'x1を更新
+            sigmoid_neuron.Range("C19") = sigmoid_neuron.Range("R7").Offset(next_counter, 0)   'x2を更新
+            
+            sigmoid_neuron.Range("T7").Offset(next_counter, 0) = sigmoid_neuron.Range("O17")  '結果の取得
+            sigmoid_neuron.Range("U7").Offset(next_counter, 0) = sigmoid_neuron.Range("S7").Offset(next_counter, 0) - sigmoid_neuron.Range("O17")    '差分計算(los)
+            
+            '重みとしきい値の調整--------------------------
+            sigmoid_neuron.Range("F16") = sigmoid_neuron.Range("F16") + (sigmoid_neuron.Range("S7").Offset(next_counter, 0) - sigmoid_neuron.Range("O17")) * sigmoid_neuron.Range("C15")
+            sigmoid_neuron.Range("F18") = sigmoid_neuron.Range("F18") + (sigmoid_neuron.Range("S7").Offset(next_counter, 0) - sigmoid_neuron.Range("O17")) * sigmoid_neuron.Range("C19")
+            sigmoid_neuron.Range("I17") = sigmoid_neuron.Range("I17") + (sigmoid_neuron.Range("S7").Offset(next_counter, 0) - sigmoid_neuron.Range("O17")) * sigmoid_neuron.Range("C17")
+            '重みとしきい値の調整--------------------------
+            
+        Next next_counter
+        '1学習工程--------------------------------------------
+
+        counter = counter + 1
+    Loop
+    '仮想学習-----------------------------------------------------------
+    
+    MsgBox "既定の学習が完了" & vbLf & "結果が伴わない場合は再度学習してください"
+        
+    Exit Sub 'プロシージャ終了
+'例外処理---------------------------------------------------------------
+err_sigmoid_train_process:
+    MsgBox "正常に処理ができませんでした。" & vbLf & "err_005"  'ユーザ補足
+'例外処理---------------------------------------------------------------
+End Sub
+'***********************************************************************
+
+
+'***********************************************************************
+'フィードフォワード(予測)用プロシージャ
+Sub back_propagation_feed_forward_process()
+On Error GoTo err_back_propagation_feed_forward_process '例外処理
+    
+    back_propagation.Range("O2").Value = back_propagation.Range("O2").Value + 1 'increment counter
+    If (back_propagation.Range("O2").Value > 3) Then
+        back_propagation.Range("O2").Value = 0 'loop counter
+    End If
+    
+    'node1
+    back_propagation.Range("F6").Value = back_propagation.Range("N6").Offset(back_propagation.Range("O2"), 0) 'x1
+    back_propagation.Range("F8").Value = back_propagation.Range("O6").Offset(back_propagation.Range("O2"), 0) 'x2
+    
+    back_propagation.Range("H8").Value = back_propagation.Range("F6").Value * back_propagation.Range("G6").Value + back_propagation.Range("F8").Value * back_propagation.Range("G8").Value + back_propagation.Range("F10").Value * back_propagation.Range("G10").Value
+    back_propagation.Range("I8").Value = 1 / (1 + Exp(-back_propagation.Range("H8").Value))
+    
+    'node2
+    back_propagation.Range("F16").Value = back_propagation.Range("N6").Offset(back_propagation.Range("O2"), 0) 'x1
+    back_propagation.Range("F18").Value = back_propagation.Range("O6").Offset(back_propagation.Range("O2"), 0) 'x2
+    
+    back_propagation.Range("H18").Value = back_propagation.Range("F16").Value * back_propagation.Range("G16").Value + back_propagation.Range("F18").Value * back_propagation.Range("G18").Value + back_propagation.Range("F20").Value * back_propagation.Range("G20").Value
+    back_propagation.Range("I18").Value = 1 / (1 + Exp(-back_propagation.Range("H18").Value))
+    
+    'outputnode
+    back_propagation.Range("J11").Value = back_propagation.Range("I8").Value 'x3
+    back_propagation.Range("J13").Value = back_propagation.Range("I18").Value 'x4
+    back_propagation.Range("L13").Value = back_propagation.Range("J11").Value * back_propagation.Range("K11").Value + back_propagation.Range("J13").Value * back_propagation.Range("K13").Value + back_propagation.Range("J15").Value * back_propagation.Range("K15").Value
+    back_propagation.Range("M13").Value = 1 / (1 + Exp(-back_propagation.Range("L13").Value)) 'o3
+    
+    back_propagation.Range("Q6").Offset(back_propagation.Range("O2"), 0) = back_propagation.Range("M13").Value 'o3 -> output
+    back_propagation.Range("R6").Offset(back_propagation.Range("O2"), 0) = back_propagation.Range("P6").Offset(back_propagation.Range("O2"), 0) - back_propagation.Range("Q6").Offset(back_propagation.Range("O2"), 0) 'error
+    back_propagation.Range("N13").Value = back_propagation.Range("R6").Offset(back_propagation.Range("O2"), 0) 'error -> delta o3
+    
+    back_propagation.Range("J8").Value = back_propagation.Range("N13").Value * back_propagation.Range("K11").Value * back_propagation.Range("M13").Value * (1 - back_propagation.Range("M13").Value) 'delta_x3
+    back_propagation.Range("J18").Value = back_propagation.Range("N13").Value * back_propagation.Range("K13").Value * back_propagation.Range("M13").Value * (1 - back_propagation.Range("M13").Value) 'delta_x4
+        
+    Exit Sub 'プロシージャ終了
+'例外処理---------------------------------------------------------------
+err_back_propagation_feed_forward_process:
+    MsgBox "正常に処理ができませんでした。" & vbLf & "err_006"  'ユーザ補足
+'例外処理---------------------------------------------------------------
+End Sub
+'***********************************************************************
+
+
+'***********************************************************************
+'出力ノード用プロシージャ
+Sub back_propagation_output_node_process()
+On Error GoTo err_back_propagation_output_node_process '例外処理
+    
+    back_propagation.Range("K11").Value = back_propagation.Range("K11").Value + back_propagation.Range("N13").Value * back_propagation.Range("J11").Value * back_propagation.Range("M13").Value * (1 - back_propagation.Range("M13").Value) * back_propagation.Range("O3").Value
+    back_propagation.Range("K13").Value = back_propagation.Range("K13").Value + back_propagation.Range("N13").Value * back_propagation.Range("J13").Value * back_propagation.Range("M13").Value * (1 - back_propagation.Range("M13").Value) * back_propagation.Range("O3").Value
+    back_propagation.Range("K15").Value = back_propagation.Range("K15").Value + back_propagation.Range("N13").Value * back_propagation.Range("J15").Value * back_propagation.Range("M13").Value * (1 - back_propagation.Range("M13").Value) * back_propagation.Range("O3").Value 'T3 = T3 + delta_T3
+        
+    Exit Sub 'プロシージャ終了
+'例外処理---------------------------------------------------------------
+err_back_propagation_output_node_process:
+    MsgBox "正常に処理ができませんでした。" & vbLf & "err_007"  'ユーザ補足
+'例外処理---------------------------------------------------------------
+End Sub
+'***********************************************************************
+
+
+'***********************************************************************
+'入力ノード用プロシージャ
+Sub back_propagation_input_node_process()
+On Error GoTo err_back_propagation_input_node_process '例外処理
+    
+    back_propagation.Range("G6").Value = back_propagation.Range("G6").Value + back_propagation.Range("J8").Value * back_propagation.Range("F6").Value * back_propagation.Range("I8").Value * (1 - back_propagation.Range("I8").Value) * back_propagation.Range("O3").Value 'w1 = w1 + (x1*delta_x3*x3*(1-x3)*0.9
+    back_propagation.Range("G8").Value = back_propagation.Range("G8").Value + back_propagation.Range("J8").Value * back_propagation.Range("F8").Value * back_propagation.Range("I8").Value * (1 - back_propagation.Range("I8").Value) * back_propagation.Range("O3").Value 'w2 = w2 + delta_w2
+    back_propagation.Range("G10").Value = back_propagation.Range("G10").Value + back_propagation.Range("J8").Value * back_propagation.Range("F10").Value * back_propagation.Range("I8").Value * (1 - back_propagation.Range("I8").Value) * back_propagation.Range("O3").Value 'T1 = T1 + delta_T1
+    
+    back_propagation.Range("G16").Value = back_propagation.Range("G16").Value + back_propagation.Range("J18").Value * back_propagation.Range("F16").Value * back_propagation.Range("I18").Value * (1 - back_propagation.Range("I18").Value) * back_propagation.Range("O3").Value
+    back_propagation.Range("G18").Value = back_propagation.Range("G18").Value + back_propagation.Range("J18").Value * back_propagation.Range("F18").Value * back_propagation.Range("I18").Value * (1 - back_propagation.Range("I18").Value) * back_propagation.Range("O3").Value
+    back_propagation.Range("G20").Value = back_propagation.Range("G20").Value + back_propagation.Range("J18").Value * back_propagation.Range("F20").Value * back_propagation.Range("I18").Value * (1 - back_propagation.Range("I18").Value) * back_propagation.Range("O3").Value
+        
+    Exit Sub 'プロシージャ終了
+'例外処理---------------------------------------------------------------
+err_back_propagation_input_node_process:
+    MsgBox "正常に処理ができませんでした。" & vbLf & "err_008"  'ユーザ補足
+'例外処理---------------------------------------------------------------
+End Sub
+'***********************************************************************
+
+
+'***********************************************************************
+'学習用プロシージャ
+Sub back_propagation_train_process()
+On Error GoTo err_back_propagation_train_process '例外処理
+    
+    Dim train_status As Boolean    '学習完了状態の保管用変数
+    
+    For counter = 1 To 10000
+        
+        Call back_propagation_feed_forward_process
+        Call back_propagation_output_node_process
+        Call back_propagation_input_node_process
+        
+        '学習結果の判定-----------------------------------------------
+        train_status = True    '学習完了状態の初期化
+        
+        If (Abs(back_propagation.Range("R6").Value) >= 0.05) Then train_status = False
+        If (Abs(back_propagation.Range("R7").Value) >= 0.05) Then train_status = False
+        If (Abs(back_propagation.Range("R8").Value) >= 0.05) Then train_status = False
+        If (Abs(back_propagation.Range("R9").Value) >= 0.05) Then train_status = False
+        
+        If (train_status = True) Then '過学習防止
+            Exit For
+        End If
+        '学習結果の判定-----------------------------------------------
+        
+    Next
+    
+    MsgBox "既定の学習が完了" & vbLf & "結果が伴わない場合は再度学習してください"
+    
+    Exit Sub 'プロシージャ終了
+'例外処理---------------------------------------------------------------
+err_back_propagation_train_process:
+    MsgBox "正常に処理ができませんでした。" & vbLf & "err_009"  'ユーザ補足
+'例外処理---------------------------------------------------------------
+End Sub
+'***********************************************************************
+
+
+'***********************************************************************
+'初期化用プロシージャ
+Sub back_propagation_initialize_process()
+On Error GoTo err_back_propagation_initialize_process '例外処理
+    
+    '重み及びしきい値の初期化--------------------------------------------
+    back_propagation.Range("O2").Value = 3
+    
+    back_propagation.Range("G6").Value = Rnd * 2 - 1
+    back_propagation.Range("G8").Value = Rnd * 2 - 1
+    back_propagation.Range("G10").Value = Rnd * 2 - 1
+    back_propagation.Range("G16").Value = Rnd * 2 - 1
+    back_propagation.Range("G18").Value = Rnd * 2 - 1
+    back_propagation.Range("G20").Value = Rnd * 2 - 1
+    back_propagation.Range("K11").Value = Rnd * 2 - 1
+    back_propagation.Range("K13").Value = Rnd * 2 - 1
+    back_propagation.Range("K15").Value = Rnd * 2 - 1
+    '重み及びしきい値の初期化--------------------------------------------
+    
+    Exit Sub 'プロシージャ終了
+'例外処理---------------------------------------------------------------
+err_back_propagation_initialize_process:
+    MsgBox "正常に処理ができませんでした。" & vbLf & "err_010"  'ユーザ補足
+'例外処理---------------------------------------------------------------
+End Sub
+'***********************************************************************
+
+
+'***********************************************************************
+'学習用プロシージャ
+Sub deep_learning_train_process()
+On Error GoTo err_deep_learning_train_process '例外処理
+    
+    Dim train_status As Boolean    '学習完了状態の保管用変数
+    
+    Dim train_counter As Integer      '学習回数保管用変数
+    
+    Dim last_line As Long   '最終行の保管用変数
+    
+    'セットアップ-----------------------------------------------------------
+    deep_learning.Range("L19").Value = 0
+    training_data.Range("B3:F" & Rows.Count).ClearContents
+    'セットアップ-----------------------------------------------------------
+    
+    '仮想学習------------------------------------------------------------
+    counter = 0
+    Do While counter <= 10000 '10000学習する
+        
+        '学習(入力値の調整)------------------------------------------
+        deep_learning.Range("L19").Value = deep_learning.Range("L19").Value + 1
+        
+        If (deep_learning.Range("L19").Value >= 4) Then
+            deep_learning.Range("L19").Value = 0
+        End If
+        
+        deep_learning.Range("L17").Value = deep_learning.Range("B21").Offset(deep_learning.Range("L19"), 0)
+        deep_learning.Range("L21").Value = deep_learning.Range("C21").Offset(deep_learning.Range("L19"), 0)
+        '学習(入力値の調整)------------------------------------------
+        
+        '学習(誤差逆伝搬法)------------------------------------------
+        deep_learning.Range("F21").Offset(deep_learning.Range("L19"), 0) = deep_learning.Range("BH20").Value    'テスト結果出力
+        deep_learning.Range("G21").Offset(deep_learning.Range("L19"), 0) = deep_learning.Range("D21").Offset(deep_learning.Range("L19"), 0) - deep_learning.Range("F21").Offset(deep_learning.Range("L19"), 0)    'ロスの出力
+        
+        deep_learning.Range("BH21").Value = deep_learning.Range("G21").Offset(deep_learning.Range("L19"), 0) 's5g
+        
+        deep_learning.Range("AS18").Value = deep_learning.Range("BH21").Value * deep_learning.Range("AY19").Value * deep_learning.Range("BH20").Value * (1 - deep_learning.Range("BH20").Value) 's3g
+        
+        deep_learning.Range("AS24").Value = deep_learning.Range("BH21").Value * deep_learning.Range("AY21").Value * deep_learning.Range("BH20").Value * (1 - deep_learning.Range("BH20").Value) 's4g
+        
+        deep_learning.Range("AD18").Value = deep_learning.Range("AS18").Value * deep_learning.Range("AJ16").Value * deep_learning.Range("AS17").Value * (1 - deep_learning.Range("AS17").Value) 's1
+        deep_learning.Range("AD18").Value = deep_learning.Range("AD18").Value + deep_learning.Range("AS24").Value * deep_learning.Range("AJ22").Value * deep_learning.Range("AS23").Value * (1 - deep_learning.Range("AS23").Value) 's1g
+        
+        deep_learning.Range("AD24").Value = deep_learning.Range("AS18").Value * deep_learning.Range("AJ18").Value * deep_learning.Range("AS17").Value * (1 - deep_learning.Range("AS17").Value) 's2
+        deep_learning.Range("AD24").Value = deep_learning.Range("AD24").Value + deep_learning.Range("AS24").Value * deep_learning.Range("AJ24").Value * deep_learning.Range("AS23").Value * (1 - deep_learning.Range("AS23").Value) 's2g
+        '学習(誤差逆伝搬法)------------------------------------------
+        
+        '学習(重みとしきい値の調整)------------------------------------
+        deep_learning.Range("AY19").Value = deep_learning.Range("AY19").Value + deep_learning.Range("BH21").Value * deep_learning.Range("AV18").Value * deep_learning.Range("BH20").Value * (1 - deep_learning.Range("BH20").Value) 's5x1w
+        deep_learning.Range("AY21").Value = deep_learning.Range("AY21").Value + deep_learning.Range("BH21").Value * deep_learning.Range("AV22").Value * deep_learning.Range("BH20").Value * (1 - deep_learning.Range("BH20").Value) 's5x2w
+        deep_learning.Range("BB20").Value = deep_learning.Range("BB20").Value + deep_learning.Range("BH21").Value * deep_learning.Range("AV20").Value * deep_learning.Range("BH20").Value * (1 - deep_learning.Range("BH20").Value) 's5t
+        
+        deep_learning.Range("AJ16").Value = deep_learning.Range("AJ16").Value + deep_learning.Range("AS18").Value * deep_learning.Range("AG15").Value * deep_learning.Range("AS17").Value * (1 - deep_learning.Range("AS17").Value) 's3x1w
+        deep_learning.Range("AJ18").Value = deep_learning.Range("AJ18").Value + deep_learning.Range("AS18").Value * deep_learning.Range("AG19").Value * deep_learning.Range("AS17").Value * (1 - deep_learning.Range("AS17").Value) 's3x2w
+        deep_learning.Range("AM17").Value = deep_learning.Range("AM17").Value + deep_learning.Range("AS18").Value * deep_learning.Range("AG17").Value * deep_learning.Range("AS17").Value * (1 - deep_learning.Range("AS17").Value) 's3t
+        
+        deep_learning.Range("AJ22").Value = deep_learning.Range("AJ22").Value + deep_learning.Range("AS24").Value * deep_learning.Range("AG21").Value * deep_learning.Range("AS23").Value * (1 - deep_learning.Range("AS23").Value) 's4x1w
+        deep_learning.Range("AJ24").Value = deep_learning.Range("AJ24").Value + deep_learning.Range("AS24").Value * deep_learning.Range("AG25").Value * deep_learning.Range("AS23").Value * (1 - deep_learning.Range("AS23").Value) 's4x2w
+        deep_learning.Range("AM23").Value = deep_learning.Range("AM23").Value + deep_learning.Range("AS24").Value * deep_learning.Range("AG23").Value * deep_learning.Range("AS23").Value * (1 - deep_learning.Range("AS23").Value) 's4t
+        
+        deep_learning.Range("U16").Value = deep_learning.Range("U16").Value + deep_learning.Range("AD18").Value * deep_learning.Range("R15").Value * deep_learning.Range("AD17").Value * (1 - deep_learning.Range("AD17").Value) 's1x1w
+        deep_learning.Range("U18").Value = deep_learning.Range("U18").Value + deep_learning.Range("AD18").Value * deep_learning.Range("R19").Value * deep_learning.Range("AD17").Value * (1 - deep_learning.Range("AD17").Value) 's1x2w
+        deep_learning.Range("X17").Value = deep_learning.Range("X17").Value + deep_learning.Range("AD18").Value * deep_learning.Range("R17").Value * deep_learning.Range("AD17").Value * (1 - deep_learning.Range("AD17").Value) 's1t
+        
+        deep_learning.Range("U22").Value = deep_learning.Range("U22").Value + deep_learning.Range("AD24").Value * deep_learning.Range("R21").Value * deep_learning.Range("AD23").Value * (1 - deep_learning.Range("AD23").Value) 's2x1w
+        deep_learning.Range("U24").Value = deep_learning.Range("U24").Value + deep_learning.Range("AD24").Value * deep_learning.Range("R25").Value * deep_learning.Range("AD23").Value * (1 - deep_learning.Range("AD23").Value) 's2x2w
+        deep_learning.Range("X23").Value = deep_learning.Range("X23").Value + deep_learning.Range("AD24").Value * deep_learning.Range("R23").Value * deep_learning.Range("AD23").Value * (1 - deep_learning.Range("AD23").Value) 's2t
+        '学習(重みとしきい値の調整)------------------------------------
+        
+        '学習結果の判定-----------------------------------------------
+        train_status = True    '学習完了状態の初期化
+        
+        If (Abs(deep_learning.Range("G21").Value) >= 0.05) Then train_status = False
+        If (Abs(deep_learning.Range("G22").Value) >= 0.05) Then train_status = False
+        If (Abs(deep_learning.Range("G23").Value) >= 0.05) Then train_status = False
+        If (Abs(deep_learning.Range("G24").Value) >= 0.05) Then train_status = False
+        
+        training_data.Range("B" & counter + 3).Value = counter + 1
+        training_data.Range("C" & counter + 3).Value = Abs(deep_learning.Range("G21").Value)
+        training_data.Range("D" & counter + 3).Value = Abs(deep_learning.Range("G22").Value)
+        training_data.Range("E" & counter + 3).Value = Abs(deep_learning.Range("G23").Value)
+        training_data.Range("F" & counter + 3).Value = Abs(deep_learning.Range("G24").Value)
+        
+        If (train_status = True) Then '過学習防止
+            Exit Do
+        End If
+        '学習結果の判定-----------------------------------------------
+        
+        'カウンタの更新--------------------------------------------------
+        counter = counter + 1
+        'カウンタの更新--------------------------------------------------
+        
+    Loop
+    '仮想学習------------------------------------------------------------
+    
+    'UI format対応---------------------------------------------
+    last_line = training_data.Cells(Rows.Count, 2).End(xlUp).Row '最終行の取得
+    training_data.Range("B3:F" & last_line).Borders.LineStyle = xlContinuous '実線
+    
+    training_data.ChartObjects(1).Chart.SetSourceData training_data.Range("C2:F" & last_line)
+    'UI format対応---------------------------------------------
+    
+    MsgBox "既定の学習が完了" & vbLf & "結果が伴わない場合は再度学習してください"
+    
+    Exit Sub 'プロシージャ終了
+'例外処理---------------------------------------------------------------
+err_deep_learning_train_process:
+    MsgBox "正常に処理ができませんでした。" & vbLf & "err_011"  'ユーザ補足
+'例外処理---------------------------------------------------------------
+End Sub
+'***********************************************************************
+
+
+'***********************************************************************
+'初期化用プロシージャ
+Sub deep_learning_initialize_process()
+On Error GoTo err_deep_learning_initialize_process '例外処理
+    
+    '重み及びしきい値の初期化--------------------------------------------
+    deep_learning.Range("L17,L19,L21").Value = 0
+    's1
+    deep_learning.Range("U16") = Rnd * 2 - 1
+    deep_learning.Range("U18") = Rnd * 2 - 1
+    deep_learning.Range("X17") = Rnd * 2 - 1
+    's2
+    deep_learning.Range("U22") = Rnd * 2 - 1
+    deep_learning.Range("U24") = Rnd * 2 - 1
+    deep_learning.Range("X23") = Rnd * 2 - 1
+    's3
+    deep_learning.Range("AJ16") = Rnd * 2 - 1
+    deep_learning.Range("AJ18") = Rnd * 2 - 1
+    deep_learning.Range("AM17") = Rnd * 2 - 1
+    's4
+    deep_learning.Range("AJ22") = Rnd * 2 - 1
+    deep_learning.Range("AJ24") = Rnd * 2 - 1
+    deep_learning.Range("AM23") = Rnd * 2 - 1
+    's5
+    deep_learning.Range("AY19") = Rnd * 2 - 1
+    deep_learning.Range("AY21") = Rnd * 2 - 1
+    deep_learning.Range("BB20") = Rnd * 2 - 1
+    '重み及びしきい値の初期化--------------------------------------------
+    
+    Exit Sub 'プロシージャ終了
+'例外処理---------------------------------------------------------------
+err_deep_learning_initialize_process:
+    MsgBox "正常に処理ができませんでした。" & vbLf & "err_012"  'ユーザ補足
+'例外処理---------------------------------------------------------------
+End Sub
+'***********************************************************************
+
+

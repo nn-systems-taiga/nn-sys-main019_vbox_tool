@@ -1,7 +1,9 @@
 https://github.com/RacelogicVBOX/VBB-to-Python
 
 m=(R15*U16)+(R19*U18)+(R17*X17)
-z==1/(1+EXP(-AA17))
+z=1/(1+EXP(-AA17))
+x1=z1
+x2=z2
 
 '***********************************************************************
 'AINNRB_ver0.0「Artificial Intelligence Neural Network Environment Build」

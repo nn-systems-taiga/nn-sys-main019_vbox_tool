@@ -1,4 +1,9 @@
 https://github.com/RacelogicVBOX/VBB-to-Python
+https://ipsj.ixsq.nii.ac.jp/records/220812
+https://ipsj.ixsq.nii.ac.jp/records/214995
+https://www.ieice.org/publications/conference-FIT-DVDs/FIT2020/data/pdf/F-026.pdf
+https://www.ieice.org/publications/conference-FIT-DVDs/FIT2021/data/pdf/F-038.pdf
+
 
 m=(R15*U16)+(R19*U18)+(R17*X17)
 z=1/(1+EXP(-AA17))

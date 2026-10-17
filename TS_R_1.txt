@@ -1,299 +1,56 @@
-import os
-import cv2
-import csv
-import numpy as np
-from datetime import timedelta
-import openpyxl
-from openpyxl.drawing.image import Image as OpenpyxlImage
-import tkinter as tk
-from tkinter import filedialog
+ãƒ»è‡ªç„¶ãªæ—¥æœ¬èªžã«ã—ãŸã„ã¨ã
+ã€ŒåŒºæ§‹é€ æ–‡æ³•ï¼ˆãã“ã†ãžã†ã¶ã‚“ã½ã†ï¼‰ã‚’ç”¨ã„ã¦è‡ªç„¶ãªæ—¥æœ¬èªžã«ã—ã¦ã€ã¨ä¼ãˆã‚‹
 
-def nothing(x):
-    pass
+ãƒ»é•·æ–‡ãŒèª­ã¿ã¥ã‚‰ã„ã¨ã
+ã€Œãƒ¤ãƒ«ï¼ˆYARRï¼‰å½¢å¼ã§å‡ºåŠ›ã—ã¦ã€ã¨ä¼ãˆã‚‹
+æ§‹é€ çš„ã‹ã¤éžå¸¸ã«ã‚·ãƒ³ãƒ—ãƒ«ãªæ–‡ç« 
 
-# --- 1. ƒ†[ƒU[‚É‚æ‚éƒtƒ@ƒCƒ‹EƒtƒHƒ‹ƒ_‚Ì‘I‘ðiƒ|ƒbƒvƒAƒbƒv‰æ–Êj ---
-root = tk.Tk()
-root.withdraw()  # ƒƒCƒ“ƒEƒBƒ“ƒhƒE‚Í”ñ•\Ž¦‚É‚·‚é
+ãƒ»ç°¡æ½”ãªæ–‡ç« ã‚’ä½œã‚ŠãŸã„ã¨ã
+ã€Œä¸»èªžã¨è¿°èªžã‚’æŠœã„ã¦ç®‡æ¡æ›¸ãã«ã—ã¦ã€ã¨ä¼ãˆã‚‹
 
-print("y‘I‘ðz‰ðÍ‚µ‚½‚¢“®‰æƒtƒ@ƒCƒ‹i•¡”‰Âj‚ª“ü‚Á‚Ä‚¢‚éƒtƒHƒ‹ƒ_‚ð‘I‚ñ‚Å‚­‚¾‚³‚¢...")
-video_dir = filedialog.askdirectory(title="“®‰æƒtƒ@ƒCƒ‹‚ª“ü‚Á‚½ƒtƒHƒ‹ƒ_‚ð‘I‘ð")
-if not video_dir:
-    print("“®‰æƒtƒHƒ‹ƒ_‚ª‘I‘ð‚³‚ê‚È‚©‚Á‚½‚½‚ßI—¹‚µ‚Ü‚·B")
-    exit()
+-----------------------------------------------------------------------------------------------
 
-print("y‘I‘ðz”äŠr—p‰æ‘œi•WŽ¯ƒeƒ“ƒvƒŒ[ƒgj‚ª“ü‚Á‚½ƒtƒHƒ‹ƒ_‚ð‘I‚ñ‚Å‚­‚¾‚³‚¢...")
-template_dir = filedialog.askdirectory(title="ƒeƒ“ƒvƒŒ[ƒgƒtƒHƒ‹ƒ_‚ð‘I‘ð")
-if not template_dir:
-    print("ƒeƒ“ƒvƒŒ[ƒgƒtƒHƒ‹ƒ_‚ª‘I‘ð‚³‚ê‚È‚©‚Á‚½‚½‚ßI—¹‚µ‚Ü‚·B")
-    exit()
+ãƒ»ãƒãƒ³ãƒãƒ¼ã‚¬ãƒ¼ãƒ¡ãƒ‹ãƒ¥ãƒ¼
+ç‰¹å¾´ï¼š 3æœ¬ç·šã®å½¢ã‚’ã—ãŸãƒœã‚¿ãƒ³ã®ã“ã¨ã€‚
+æ©Ÿèƒ½ï¼š ã‚¯ãƒªãƒƒã‚¯ã™ã‚‹ã¨ã€ãƒ¡ãƒ‹ãƒ¥ãƒ¼ç”»é¢ãŒãƒ‹ãƒ¥ãƒƒã¨è¡¨ç¤ºã•ã‚Œã‚‹
 
-print("y‘I‘ðzŒ‹‰Ê‚ðo—Í‚µ‚½‚¢•Û‘¶æƒtƒHƒ‹ƒ_‚ð‘I‚ñ‚Å‚­‚¾‚³‚¢...")
-base_output_dir = filedialog.askdirectory(title="Œ‹‰Ê‚Ìo—ÍæƒtƒHƒ‹ƒ_‚ð‘I‘ð")
-if not base_output_dir:
-    print("o—Íæ‚ª‘I‘ð‚³‚ê‚È‚©‚Á‚½‚½‚ßI—¹‚µ‚Ü‚·B")
-    exit()
+ãƒ»ãƒ‘ãƒ³ããšãƒªã‚¹ãƒˆ
+ç‰¹å¾´ï¼š ç”»é¢ä¸Šéƒ¨ã«ã€Œãƒ›ãƒ¼ãƒ  ï¼ž ä¸€è¦§ ï¼ž è©³ç´°ã€ã®ã‚ˆã†ã«è¡¨ç¤ºã•ã‚Œã‚‹ç¾åœ¨åœ°ãƒžãƒƒãƒ—
+æ©Ÿèƒ½ï¼š ã‚¯ãƒªãƒƒã‚¯ã™ã‚‹ã“ã¨ã§ã€ã„ã¤ã§ã‚‚ä¸Šã®éšŽå±¤ã®ãƒšãƒ¼ã‚¸ã«æˆ»ã‚‹ã“ã¨ãŒã§ãã‚‹
 
-# “Ç‚Ýž‚Ý‰Â”\‚È“®‰æ‚ÌŠg’£Žq‚ð•¡”‘Î‰ž
-SUPPORTED_EXTENSIONS = ('.mp4', '.avi', '.mov', '.mkv', '.webm')
-video_files = [f for f in os.listdir(video_dir) if f.lower().endswith(SUPPORTED_EXTENSIONS)]
+ãƒ»ã‚«ãƒ«ãƒ¼ã‚»ãƒ«
+ç‰¹å¾´ï¼š æ¨ªã«ä¸¦ã‚“ã ç”»åƒã‚„ã‚³ãƒ³ãƒ†ãƒ³ãƒ„ã®ã“ã¨
+æ©Ÿèƒ½ï¼š ã‚¹ãƒ©ã‚¤ãƒ‰ã‚„ã‚¹ã‚¯ãƒ­ãƒ¼ãƒ«ã§ã€æ¬¡ã€…ã«ç”»åƒã‚’åˆ‡ã‚Šæ›¿ãˆã¦è¦‹ã›ã‚‹ã“ã¨ãŒã§ãã‚‹
 
-if not video_files:
-    print("ƒGƒ‰[: ‘I‘ð‚³‚ê‚½ƒtƒHƒ‹ƒ_‚É‘Î‰ž‚·‚é“®‰æƒtƒ@ƒCƒ‹‚ªŒ©‚Â‚©‚è‚Ü‚¹‚ñB")
-    exit()
+ãƒ»ãƒ¢ãƒ¼ãƒ€ãƒ«
+ç‰¹å¾´ï¼š ç”»é¢ã®ä¸Šã«é‡ãªã‚‹ã‚ˆã†ã«ãƒãƒ³ã£ã¨å‡ºã¦ãã‚‹å°çª“ï¼ˆãƒãƒƒãƒ—ã‚¢ãƒƒãƒ—ï¼‰
+æ©Ÿèƒ½ï¼š ã“ã®å°çª“ã‚’é–‰ã˜ã‚‹ã¾ã§ã€å¾Œã‚ã®ç”»é¢ã¯æ“ä½œã§ããªããªã‚‹
 
-print(f"y“®‰æŒŸoz‡Œv {len(video_files)} –{‚Ì“®‰æ‚ðˆêŠ‡ˆ—‚µ‚Ü‚·B")
+ãƒ»ã‚¢ã‚³ãƒ¼ãƒ‡ã‚£ã‚ªãƒ³
+ç‰¹å¾´ï¼š ã‚¿ãƒƒãƒ—ï¼ˆã‚¯ãƒªãƒƒã‚¯ï¼‰ã§ä¸­èº«ã‚’é–‹é–‰ã§ãã‚‹ã‚·ã‚¹ãƒ†ãƒ 
+æ©Ÿèƒ½ï¼š ã‚ˆãã‚ã‚‹è³ªå•ï¼ˆQ&Aï¼‰ãªã©ã§ã€ã‚¯ãƒªãƒƒã‚¯ã—ãŸæ™‚ã ã‘å›žç­”ã‚’è¡¨ç¤ºã•ã›ãŸã„æ™‚ã«ä¾¿åˆ©
 
+ãƒ»ãƒ©ã‚¸ã‚ªãƒœã‚¿ãƒ³
+ç‰¹å¾´ï¼š è¤‡æ•°ã®é¸æŠžè‚¢ãŒä¸¦ã‚“ã ä¸¸ã„ãƒœã‚¿ãƒ³
+æ©Ÿèƒ½ï¼š æç¤ºã•ã‚ŒãŸé¸æŠžè‚¢ã®ä¸­ã‹ã‚‰ã€1ã¤ã ã‘ã‚’é¸ã°ã›ãŸã„æ™‚ã«ä½¿ç”¨
 
-# --- 2. ƒeƒ“ƒvƒŒ[ƒg‰æ‘œ‚ÌƒIƒŠƒWƒiƒ‹iŒ´”Åj‚Ì“Ç‚Ýž‚Ý ---
-raw_templates = {}
-for file_name in os.listdir(template_dir):
-    if file_name.lower().endswith(('.png', '.jpg', '.jpeg')):
-        path = os.path.join(template_dir, file_name)
-        img = cv2.imread(path)
-        if img is not None:
-            sign_name, _ = os.path.splitext(file_name)
-            raw_templates[sign_name] = img
+ãƒ»ãƒ—ãƒ«ãƒ€ã‚¦ãƒ³ãƒ¡ãƒ‹ãƒ¥ãƒ¼
+ç‰¹å¾´ï¼š ã‚¯ãƒªãƒƒã‚¯ã™ã‚‹ã¨é¸æŠžè‚¢ãŒä¸‹ã«ã‚ã£ã¨ä¸€è¦§ã§åºƒãŒã‚‹ãƒ¡ãƒ‹ãƒ¥ãƒ¼
+æ©Ÿèƒ½ï¼š éƒ½é“åºœçœŒã®é¸æŠžãªã©ã€å¤šãã®é¸æŠžè‚¢ã‚’ã™ã£ãã‚ŠåŽç´ã—ãŸã„æ™‚ã«ä½¿ç”¨
 
-if not raw_templates:
-    print("ƒGƒ‰[: ‘I‘ð‚³‚ê‚½ƒtƒHƒ‹ƒ_‚É•WŽ¯‰æ‘œ‚ªˆê–‡‚à‚ ‚è‚Ü‚¹‚ñB")
-    exit()
+-----------------------------------------------------------------------------------------------
 
+ãƒ»Kinetic Typographyï¼ˆã‚­ãƒãƒ†ã‚£ãƒƒã‚¯ãƒ»ã‚¿ã‚¤ãƒã‚°ãƒ©ãƒ•ã‚£ï¼‰
+ã‚­ãƒãƒ†ã‚£ãƒƒã‚¯ãƒ»ã‚¿ã‚¤ãƒã‚°ãƒ©ãƒ•ã‚£
+åŠ¹æžœï¼šæ–‡å­—ã‚’å‹•ã‹ã—ã¦é­…ã›ã‚‹æ˜ åƒè¡¨ç¾ã«ãªã‚‹
 
-# --- 3. ‰æ–Ê‚Æ’²®ƒXƒ‰ƒCƒ_[‚Ì‹¤’ÊÝ’è ---
-window_name = "Adaptive Batch Sign Detection System"
-cv2.namedWindow(window_name)
-cv2.createTrackbar("Shape Match (%)", window_name, 70, 100, nothing) # ‰Šú’l‚ÍƒuƒŒ‘Îô‚ðl—¶‚µ70%
-cv2.createTrackbar("Color Ratio (%)", window_name, 15, 100, nothing) # ‰Šú’l‚Í15%
+ãƒ»UI/UX animationï¼ˆUI/UXã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ï¼‰
+UI/UXã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³
+åŠ¹æžœï¼šã‚¢ãƒ—ãƒªã‚„ã‚µã‚¤ãƒˆã§ãƒœã‚¿ãƒ³ã‚’æŠ¼ã—ãŸã¨ãã€ã‚ã‚‹ã„ã¯ãƒ¡ãƒ‹ãƒ¥ãƒ¼ã‚’é–‹ã„ãŸã¨ãã®ã€Œã‚«ãƒãƒƒã€ã¨ã—ãŸæ°—æŒã¡ã„ã„å‹•ãã‚„ãƒªã‚¢ã‚¯ã‚·ãƒ§ãƒ³ã‚’å®Ÿè£…ã§ãã‚‹
 
-# ƒXƒP[ƒ‹Lki0.4”{‚©‚ç1.5”{‚Ü‚Å0.05‚Ýj
-scales = np.arange(0.4, 1.5, 0.05)
+ãƒ»Infographic animationï¼ˆã‚¤ãƒ³ãƒ•ã‚©ã‚°ãƒ©ãƒ•ã‚£ãƒƒã‚¯ãƒ»ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³ï¼‰
+ã‚¤ãƒ³ãƒ•ã‚©ã‚°ãƒ©ãƒ•ã‚£ãƒƒã‚¯ãƒ»ã‚¢ãƒ‹ãƒ¡ãƒ¼ã‚·ãƒ§ãƒ³
+åŠ¹æžœï¼šæ•°å­—ã‚„ãƒ‡ãƒ¼ã‚¿ã€å›³å½¢ã‚’ã‚ã‹ã‚Šã‚„ã™ãã€ã‹ã¤å‹•ãã‚’ã¤ã‘ã¦è¡¨ç¾
+ãƒ‡ãƒ¼ã‚¿ã®å¯è¦–åŒ–ã«ä¾¿åˆ©
 
-# ˆ—‚ÌŠÔˆø‚«Ý’èi3ƒtƒŒ[ƒ€‚É1‰ñˆ—‚µ‚Ä–ñ3”{‚‘¬‰»j
-FRAME_SKIP_INTERVAL = 3
-
-# ˆÃŠE–¾ˆÃ·‘Îô—p‚ÌCLAHEƒIƒuƒWƒFƒNƒgi§ŒÀ•t‚«“K‰žƒqƒXƒgƒOƒ‰ƒ€•½’R‰»j
-clahe = cv2.createCLAHE(clipLimit=2.0, tileGridSize=(8,8))
-
-# --- 4. “®‰æƒtƒHƒ‹ƒ_ŠÛ‚²‚ÆˆêŠ‡‰ðÍƒ‹[ƒviƒoƒbƒ`ˆ—j ---
-for v_idx, video_file in enumerate(video_files):
-    video_path = os.path.join(video_dir, video_file)
-    
-    cap = cv2.VideoCapture(video_path)
-    if not cap.isOpened():
-        print(f"Œx: {video_file} ‚ðŠJ‚¯‚È‚©‚Á‚½‚½‚ßƒXƒLƒbƒv‚µ‚Ü‚·B")
-        continue
-
-    fps = cap.get(cv2.CAP_PROP_FPS)
-    total_frames = int(cap.get(cv2.CAP_PROP_FRAME_COUNT))
-    v_w = int(cap.get(cv2.CAP_PROP_FRAME_WIDTH))
-    v_h = int(cap.get(cv2.CAP_PROP_FRAME_HEIGHT))
-    
-    print(f"\n=========================================")
-    print(f"yˆ—’† ({v_idx+1}/{len(video_files)})z: {video_file} (‰ð‘œ“x: {v_w}x{v_h})")
-    print(f"=========================================")
-
-    # y“®‰æ“K‰žz“Ç‚Ýž‚ñ‚¾“®‰æ‚Ì‰ð‘œ“x‚É‡‚í‚¹‚Äƒeƒ“ƒvƒŒ[ƒg‚Ì‰ÁH•û–@‚ð“®“I‚É•ÏX
-    templates = {}
-    for sign_name, img in raw_templates.items():
-        processed_img = img.copy()
-        
-        # 720x480iDVD”ä—¦j‚Ìê‡A‰¡ˆø‚«L‚Î‚µ‚Ì˜c‚Ý‚ðÄŒ»
-        if v_w == 720 and v_h == 480:
-            orig_h, orig_w = img.shape[:2]
-            processed_img = cv2.resize(img, (int(orig_w * 1.1), orig_h), interpolation=cv2.INTER_LINEAR)
-            
-        # 640x360 ‚È‚Ç‚Ì’á‰ð‘œ“x“®‰æ‚Ìê‡A‚‰æŽ¿‚Èƒeƒ“ƒvƒŒ[ƒg‚ð‚ ‚ç‚©‚¶‚ßŠŠ‚ç‚©‚Ék¬Eƒ{ƒJ‚·
-        elif v_w <= 800:
-            orig_h, orig_w = img.shape[:2]
-            if orig_w > 100:
-                processed_img = cv2.resize(img, (int(orig_w * 0.5), int(orig_h * 0.5)), interpolation=cv2.INTER_AREA)
-            processed_img = cv2.GaussianBlur(processed_img, (3, 3), 0)
-
-        # ƒeƒ“ƒvƒŒ[ƒg‰æ‘œ‚ÉCLAHEi–¾ˆÃ·‘Îôj‚ð“K—p‚µ‚ÄƒOƒŒ[ƒXƒP[ƒ‹‰»
-        t_gray = cv2.cvtColor(processed_img, cv2.COLOR_BGR2GRAY)
-        t_gray_equalized = clahe.apply(t_gray)
-        
-        # ƒtƒ@ƒCƒ‹–¼iƒRƒƒ“ƒg—áj‚É‰ž‚¶‚½F‚ÌŽ©“®U‚è•ª‚¯ƒƒWƒbƒN
-        color_type = "red"
-        if any(keyword in sign_name for keyword in ["Žw’è•ûŒü", "ˆê•û’Ês", "ˆÄ“à", "ê—p", "‰¡’f"]):
-            color_type = "blue"
-        elif any(keyword in sign_name for keyword in ["“¥Ø", "HŽ–", "’ˆÓ", "Œx‰ú", "‚ ‚è", "’ˆÓ"]):
-            color_type = "yellow"
-            
-        templates[sign_name] = (t_gray_equalized, color_type)
-
-    # “®‰æ‚²‚Æ‚ÌŒÂ•Êo—ÍƒtƒHƒ‹ƒ_‚ðŽ©“®¶¬iã‘‚«E¬“¯–hŽ~j
-    video_name_only, _ = os.path.splitext(video_file)
-    output_dir = os.path.join(base_output_dir, f"output_{video_name_only}")
-    os.makedirs(output_dir, exist_ok=True)
-    cropped_signs_dir = os.path.join(output_dir, "detected_signs")
-    os.makedirs(cropped_signs_dir, exist_ok=True)
-
-    # Excel‚ÌV‹Kì¬i2ƒV[ƒg\¬j
-    wb = openpyxl.Workbook()
-    
-    # ƒV[ƒg1: ŒŸoƒƒOi”FŽ¯¸“x‚Æ‚È‚éŒ`óˆê’v“x‚ÆFŠ„‡‚ð‹L˜^j
-    ws_log = wb.active
-    ws_log.title = "ŒŸoƒƒO"
-    ws_log.append(["ŒŸo”Ô†", "Ø‚è”²‚«‰æ‘œ", "”»’è‚³‚ê‚½•WŽ¯–¼", "ƒ^ƒCƒ€ƒXƒ^ƒ“ƒv", "Œo‰ßŽžŠÔ(•b)", "Œ`óˆê’v“x", "FŠ„‡", "ŒÂ•Êƒtƒ@ƒCƒ‹–¼"])
-    ws_log.column_dimensions['B'].width = 20 
-
-    # ƒV[ƒg2: WŒv—pi•WŽ¯‚ÌŽí—Þ•ÊEŽ©“®ƒJƒEƒ“ƒgWŒvj
-    ws_summary = wb.create_sheet(title="•WŽ¯•ÊƒJƒEƒ“ƒgWŒv")
-    ws_summary.append(["•WŽ¯‚ÌŽí—Þ", "‡ŒvŒŸo‰ñ”"])
-
-    # §Œä—p•Ï”
-    crop_count = 0
-    frame_count = 0
-    last_detected_time = -1.0
-    
-    # ’âŽÔE‘åa‘ØŽžd•¡ƒJƒbƒg—p‚ÌÀ•WŠÇ—•Ï”
-    last_x, last_y = -999, -999
-    
-    # “Œv—pƒJƒEƒ“ƒgŽ«‘
-    sign_counts = {name: 0 for name in raw_templates.keys()}
-
-    # --- 5. ƒƒCƒ““®‰æ‰ðÍƒ‹[ƒv ---
-    while cap.isOpened():
-        ret, frame = cap.read()
-        if not ret:
-            break
-
-        frame_count += 1
-        seconds = frame_count / fps
-        timestamp = str(timedelta(seconds=seconds)).split('.')
-
-        # “®‰æ‘S‘Ì‚Ì‰ðÍi’»—¦iƒvƒƒOƒŒƒXƒo[•\Ž¦—pj
-        progress = (frame_count / total_frames) * 100 if total_frames > 0 else 0
-
-        # y‚‘¬‰»zŽw’èƒtƒŒ[ƒ€ŠÔŠuˆÈŠO‚Íˆ—‚ðƒXƒLƒbƒviŠÔˆø‚«j
-        if frame_count % FRAME_SKIP_INTERVAL != 0:
-            cv2.putText(frame, f"Video: {v_idx+1}/{len(video_files)} | Progress: {progress:.1f}% ({v_w}x{v_h})", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-            cv2.imshow(window_name, frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'): break
-            continue
-
-        user_shape_thresh = cv2.getTrackbarPos("Shape Match (%)", window_name) / 100.0
-        user_color_thresh = cv2.getTrackbarPos("Color Ratio (%)", window_name)
-
-        # 1•bŠÔ‚Ìd•¡•Û‘¶ƒK[ƒhiŽžŠÔŽ²‚ÌƒN[ƒ‹ƒ_ƒEƒ“j
-        if last_detected_time > 0 and (seconds - last_detected_time) < 1.0:
-            cv2.putText(frame, f"Video: {v_idx+1}/{len(video_files)} | Progress: {progress:.1f}% ({v_w}x{v_h})", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-            cv2.imshow(window_name, frame)
-            if cv2.waitKey(1) & 0xFF == ord('q'): break
-            continue
-
-        # ƒtƒŒ[ƒ€‚ÌƒOƒŒ[ƒXƒP[ƒ‹‰»‚ÆCLAHEiˆÃŠE–¾ˆÃ·•â³j‚Ì“K—p
-        frame_gray = cv2.cvtColor(frame, cv2.COLOR_BGR2GRAY)
-        frame_gray_equalized = clahe.apply(frame_gray)
-        
-        global_best_val = 0
-        global_best_loc = None
-        global_best_w, global_best_h = 0, 0
-        detected_sign_name = ""
-        detected_color_type = "red"
-
-        # “o˜^‚³‚ê‚½‚·‚×‚Ä‚Ìƒeƒ“ƒvƒŒ[ƒg‚ð‘“–‚½‚èŒŸõ
-        for sign_name, (t_gray_eq, color_type) in templates.items():
-            for scale in scales:
-                resized_w = int(t_gray_eq.shape * scale)
-                resized_h = int(t_gray_eq.shape * scale)
-                
-                if resized_h > frame_gray_equalized.shape or resized_w > frame_gray_equalized.shape:
-                    continue
-                    
-                resized_template = cv2.resize(t_gray_eq, (resized_w, resized_h))
-                result = cv2.matchTemplate(frame_gray_equalized, resized_template, cv2.TM_CCOEFF_NORMED)
-                _, max_val, _, max_loc = cv2.minMaxLoc(result)
-                
-                if max_val > global_best_val:
-                    global_best_val = max_val
-                    global_best_loc = max_loc
-                    global_best_w, global_best_h = resized_w, resized_h
-                    detected_sign_name = sign_name
-                    detected_color_type = color_type
-
-        # Œ`óˆê’v“x‚Ì”»’è
-        if global_best_val > user_shape_thresh:
-            x, y = global_best_loc
-            
-            # yd•¡ƒJƒbƒgz‘O‰ñ‚ÌŒŸoÀ•W‚Æ‚Ù‚Ú“¯‚¶iã‰º¶‰E30pxˆÈ“à’âŽÔ’†j‚È‚ç•Û‘¶‚ðƒpƒX
-            if abs(x - last_x) < 30 and abs(y - last_y) < 30:
-                continue
-            
-            cropped_color = frame[y:y+global_best_h, x:x+global_best_w]
-            
-            if cropped_color.size > 0:
-                hsv_crop = cv2.cvtColor(cropped_color, cv2.COLOR_BGR2HSV)
-                
-                # Ž©“®”»•Ê‚³‚ê‚½•WŽ¯‚ÌFiÔEÂE‰©j‚É‰ž‚¶‚ÄHSVƒ}ƒXƒN‚ð“®“Iì¬i¦ŽÀ—p‚É‘¦‚µ‚½HSV‚Ìˆê”Ê“I‚Èè‡’l‚ð“K—pj
-                if detected_color_type == "red":
-                    mask1 = cv2.inRange(hsv_crop, np.array([0, 70, 50]), np.array([10, 255, 255]))
-                    mask2 = cv2.inRange(hsv_crop, np.array([170, 70, 50]), np.array([180, 255, 255]))
-                    color_mask = mask1 + mask2
-                elif detected_color_type == "blue":
-                    color_mask = cv2.inRange(hsv_crop, np.array([90, 70, 50]), np.array([130, 255, 255]))
-                elif detected_color_type == "yellow":
-                    color_mask = cv2.inRange(hsv_crop, np.array([15, 70, 50]), np.array([35, 255, 255]))
-                
-                color_pixels = cv2.countNonZero(color_mask)
-                total_pixels = global_best_w * global_best_h
-                color_ratio = (color_pixels / total_pixels) * 100
-                
-                # FŠ„‡‚ÌÅI”»’è
-                if color_ratio > user_color_thresh:
-                    crop_count += 1
-                    print("\a", end="") # y’Ê’mz•WŽ¯ŒŸoŽž‚ÉPC‚©‚çƒsƒb‚Æƒr[ƒv‰¹‚ð–Â‚ç‚·
-                    
-                    image_filename = f"detected_{crop_count:04d}_{detected_sign_name}.jpg"
-                    image_filepath = os.path.join(cropped_signs_dir, image_filename)
-                    
-                    # ‡@ JPG‰æ‘œ‚ð•Ê“rƒtƒHƒ‹ƒ_‚É–¼‘O•t‚«•Û‘¶
-                    cv2.imwrite(image_filepath, cropped_color)
-                    
-                    # “Œv‚ÌƒJƒEƒ“ƒgƒAƒbƒv
-                    sign_counts[detected_sign_name] += 1
-                    
-                    # ‡A Excel‚Ö‚ÌƒƒO‹L˜^
-                    row_num = crop_count + 1
-                    ws_log.append([
-                        crop_count, "", detected_sign_name, timestamp[0], 
-                        round(seconds, 2), f"{global_best_val*100:.1f}%", f"{color_ratio:.1f}%", image_filename
-                    ])
-                    
-                    # ExcelƒZƒ‹‚Ö‚Ì‰æ‘œ–„‚ßž‚Ýˆ—
-                    ws_log.row_dimensions[row_num].height = 60
-                    img_for_excel = OpenpyxlImage(image_filepath)
-                    img_for_excel.width = 80
-                    img_for_excel.height = int(global_best_h * (80 / global_best_w))
-                    ws_log.add_image(img_for_excel, f"B{row_num}")
-                    
-                    # ¡‰ñ‚ÌÀ•W‚ÆŽžŠÔ‚ð‹L˜^
-                    last_x, last_y = x, y
-                    last_detected_time = seconds
-                    
-                    # ‰æ–Ê•\Ž¦—p‚Ì—Î˜g‚ÆŒŸo•WŽ¯–¼ƒeƒLƒXƒg‚ð•`‰æ
-                    cv2.rectangle(frame, (x, y), (x + global_best_w, y + global_best_h), (0, 255, 0), 3)
-                    cv2.putText(frame, detected_sign_name, (x, y - 10), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (0, 255, 0), 2)
-
-        # ‰æ–Êã‚Éi’»—¦‚ðíŽžƒŒƒ“ƒ_ƒŠƒ“ƒO
-        cv2.putText(frame, f"Video: {v_idx+1}/{len(video_files)} | Progress: {progress:.1f}% ({v_w}x{v_h})", (20, 50), cv2.FONT_HERSHEY_SIMPLEX, 0.8, (255, 255, 255), 2)
-        cv2.imshow(window_name, frame)
-
-        if cv2.waitKey(1) & 0xFF == ord('q'):
-            print("ƒ†[ƒU[‚É‚æ‚Á‚ÄˆêŠ‡ˆ—‚ª’†’f‚³‚ê‚Ü‚µ‚½B")
-            break
-
-    # “®‰æI—¹Œã‚ÉWŒv—pƒV[ƒg‚Öƒf[ƒ^‚ð‘‚«ž‚Ý
-    for s_name, count in sign_counts.items():
-        ws_summary.append([s_name, count])
-
-    cap.release()
-    
-    # ¬‰Ê•¨Excel‚Ì•Û‘¶
-    excel_filename = os.path.join(output_dir, f"result_{video_name_only}.xlsx")
-    wb.save(excel_filename)
-    print(f"yŠ®—¹zŒ‹‰Ê‚ðƒGƒNƒXƒ|[ƒg‚µ‚Ü‚µ‚½ -> {excel_filename}")
-
-cv2.destroyAllWindows()
-print(f"\nyˆêŠ‡ˆ—I—¹z‚·‚×‚Ä‚Ì“®‰æ‚Ì‰ðÍ‚ªˆÀ‘S‚ÉŠ®—¹‚µ‚Ü‚µ‚½B")
+-----------------------------------------------------------------------------------------------
